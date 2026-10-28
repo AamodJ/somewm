@@ -174,6 +174,12 @@ some_set_seat_keyboard_focus(Client *c, bool focus_changed)
 		return;
 	}
 
+    /* Mirror focusclient(): keep selmon on the focused client's monitor so
+     * layer-shell clients without an explicit output (rofi) land here. */
+    if (!client_is_unmanaged(c) && c->mon) {
+        selmon = c->mon;
+	}
+
 	surface = some_client_get_surface(c);
 	if (!surface) {
 		wlr_seat_keyboard_notify_clear_focus(seat);
@@ -605,6 +611,15 @@ some_set_cursor_position(double x, double y, int silent)
 	}
 
 	wlr_cursor_warp(cursor, NULL, x, y);
+
+	/* wlr_cursor_warp() bypasses motionnotify(), so selmon would go stale */
+    {
+        Monitor *mon = xytomon(cursor->x, cursor->y);
+        if (mon && mon != selmon) {
+            selmon = mon;
+		}
+    }
+
 	declare_cursor_changed();
 }
 
